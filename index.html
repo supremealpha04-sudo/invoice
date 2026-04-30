@@ -2,459 +2,630 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>QuickInvoice Pro - Smart Invoice Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#002868">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SupremeInvoice">
+    <title>SupremeInvoice - Professional Invoicing</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    
+    <!-- Scripts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
-        .invoice-preview { background: white; box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1); transition: all 0.2s ease; border-radius: 1.5rem; }
-        .gradient-text { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        @media print { 
-            .no-print { display: none !important; } 
-            body { background: white; padding: 0; margin: 0; } 
-            .invoice-preview { box-shadow: none; border-radius: 0; padding: 0.5in; }
-        }
-        .form-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .form-card:hover { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-        input, textarea, select { transition: all 0.2s; }
-        .remove-item-btn { opacity: 0; transition: opacity 0.2s, background 0.2s; }
-        .item-row:hover .remove-item-btn { opacity: 1; }
-        .animated-gradient { background: linear-gradient(270deg, #4f46e5, #7c3aed, #db2777); background-size: 200% 200%; animation: gradientShift 3s ease infinite; }
-        @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        * { font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #f3f4f6; padding-bottom: 80px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid #e5e7eb; padding: 8px; z-index: 50; }
+        .nav-btn { flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 24px; transition: all 0.2s; }
+        .nav-btn.active { background: #002868; color: white; }
+        .nav-btn:not(.active):hover { background: #f3f4f6; }
+        .card { background: white; border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .fixed-header { position: fixed; top: 0; left: 0; right: 0; background: white; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 50; }
+        .main-content { margin-top: 70px; padding: 16px; max-width: 800px; margin-left: auto; margin-right: auto; }
+        input, textarea, select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+        input:focus, textarea:focus { outline: none; border-color: #002868; ring: 2px solid #002868; }
+        button { transition: all 0.2s; }
+        .hidden { display: none; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: white; border-radius: 1rem; max-width: 400px; width: 90%; padding: 1.5rem; }
     </style>
 </head>
-<body class="min-h-screen antialiased">
-    <!-- Navigation Enhanced -->
-    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-20 no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2">
-                    <div class="w-9 h-9 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md">Q</div>
-                    <span class="text-2xl font-bold gradient-text tracking-tight">QuickInvoice<span class="text-gray-700 text-base font-medium"> Pro</span></span>
+<body>
+
+<!-- Fixed Header -->
+<header class="fixed-header">
+    <div class="flex justify-between items-center max-w-4xl mx-auto">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-gradient-to-r from-[#002868] to-[#BF0A30] rounded-lg flex items-center justify-center text-white font-bold">SI</div>
+            <span class="font-bold text-lg">
+                <span class="text-[#002868]">Supreme</span>
+                <span class="text-[#BF0A30]">Invoice</span>
+            </span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="userName" class="text-sm font-medium">Guest</span>
+            <span id="planBadge" class="text-xs bg-gray-200 px-2 py-1 rounded-full">Free</span>
+            <button onclick="window.location.href='/login.html'" id="authBtn" class="bg-[#002868] text-white px-3 py-1 rounded-lg text-sm">Login</button>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="main-content">
+    <!-- Dashboard View -->
+    <div id="dashboardView">
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">📊 Dashboard</h2>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="bg-blue-50 p-3 rounded-lg text-center">
+                    <div id="invoiceCount" class="text-2xl font-bold text-blue-700">0</div>
+                    <div class="text-xs text-gray-600">Invoices This Month</div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <button id="resetBtn" class="text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors hidden sm:inline-flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                        Reset
-                    </button>
-                    <button onclick="window.print()" class="hidden sm:flex items-center gap-2 text-gray-600 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl text-sm font-medium transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        Print
-                    </button>
-                    <button id="proCtaBtn" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:shadow-md transition-all flex items-center gap-2">
-                        ✨ Explore Pro
-                    </button>
+                <div class="bg-green-50 p-3 rounded-lg text-center">
+                    <div id="revenueCount" class="text-2xl font-bold text-green-700">$0</div>
+                    <div class="text-xs text-gray-600">Total Revenue</div>
                 </div>
+            </div>
+            <div id="recentInvoices" class="space-y-2">
+                <p class="text-gray-400 text-center py-4">No invoices yet. Create your first invoice!</p>
             </div>
         </div>
-    </nav>
-
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-12">
-            <!-- Form Section - Enhanced UX -->
-            <div class="space-y-6 no-print">
-                <!-- Business Details with logo preview -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 form-card">
-                    <h2 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">1</span>
-                        Business Details
-                    </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" id="fromName" placeholder="Your Name / Business" class="col-span-1 md:col-span-2 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-transparent outline-none transition" value="Alex Design Studio">
-                        <input type="email" id="fromEmail" placeholder="Email Address" class="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400" value="alex@designstudio.com">
-                        <input type="text" id="fromPhone" placeholder="Phone Number (optional)" class="px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400" value="+1 (555) 123-4567">
-                        <input type="text" id="fromAddress" placeholder="Street Address" class="col-span-1 md:col-span-2 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400" value="123 Creative St, New York, NY 10001">
-                    </div>
-                </div>
-
-                <!-- Client Details -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 form-card">
-                    <h2 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">2</span>
-                        Client Information
-                    </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" id="toName" placeholder="Client / Company Name" class="md:col-span-2 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400" value="TechStart Inc.">
-                        <input type="email" id="toEmail" placeholder="Client Email" class="px-4 py-2.5 border border-gray-200 rounded-xl" value="billing@techstart.com">
-                        <input type="text" id="toAddress" placeholder="Client Address" class="md:col-span-2 px-4 py-2.5 border border-gray-200 rounded-xl" value="456 Business Ave, San Francisco, CA 94105">
-                    </div>
-                </div>
-
-                <!-- Invoice metadata + Currency + Items -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 form-card">
-                    <h2 class="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2 border-b border-gray-100 pb-2">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">3</span>
-                        Invoice Details
-                    </h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                        <input type="text" id="invoiceNumber" placeholder="Invoice #" class="px-4 py-2.5 border border-gray-200 rounded-xl" value="INV-2025-001">
-                        <input type="date" id="invoiceDate" class="px-4 py-2.5 border border-gray-200 rounded-xl">
-                        <input type="date" id="dueDate" class="px-4 py-2.5 border border-gray-200 rounded-xl">
-                    </div>
-                    
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-sm font-medium text-gray-700">Line Items</label>
-                        <span class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">Drag to add</span>
-                    </div>
-                    <div id="itemsContainer" class="space-y-3 max-h-[320px] overflow-y-auto pr-1"></div>
-                    
-                    <button onclick="addItem()" class="mt-4 w-full py-2.5 border-2 border-dashed border-indigo-300 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all font-medium flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Add product / service
-                    </button>
-
-                    <!-- Totals with discount option -->
-                    <div class="mt-6 pt-4 border-t border-gray-100">
-                        <div class="flex justify-between mb-2">
-                            <span class="text-gray-600">Subtotal</span>
-                            <span id="subtotal" class="font-medium text-gray-900">$0.00</span>
-                        </div>
-                        <div class="flex flex-wrap gap-3 items-center mb-2">
-                            <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
-                                <span class="text-gray-600 text-sm">Tax</span>
-                                <input type="number" id="taxRate" placeholder="%" value="0" step="0.5" class="w-16 px-2 py-1 border rounded-lg text-sm text-right">
-                                <span class="text-gray-500 text-sm">%</span>
-                            </div>
-                            <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
-                                <span class="text-gray-600 text-sm">Discount</span>
-                                <input type="number" id="discountPercent" placeholder="%" value="0" step="1" class="w-16 px-2 py-1 border rounded-lg text-sm text-right">
-                                <span class="text-gray-500 text-sm">% off</span>
-                            </div>
-                            <span id="taxAmount" class="text-gray-700 text-sm ml-auto font-medium">Tax: $0.00</span>
-                        </div>
-                        <div class="flex justify-between items-center text-xl font-bold pt-3 border-t border-gray-200">
-                            <span>Total Due</span>
-                            <span id="total" class="text-indigo-700 text-2xl tracking-tight">$0.00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Notes & Bank Details -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 form-card">
-                    <h2 class="text-base font-semibold text-gray-900 mb-3">Notes & Payment Terms</h2>
-                    <textarea id="notes" rows="3" placeholder="Payment instructions, bank details, thank you note..." class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 resize-none">Payment is due within 14 days. Bank Transfer: BIC/SWIFT: EXAMPL33 | IBAN: GB33BUKB20201555555555. Thank you for your trust!</textarea>
-                </div>
-
-                <!-- Action Buttons Group -->
-                <div class="flex flex-wrap gap-4 sticky bottom-4 bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-gray-100">
-                    <button onclick="generatePDF()" class="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3.5 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        Download PDF
-                    </button>
-                    <button onclick="window.print()" class="px-6 py-3.5 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition-all flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                        Print
-                    </button>
-                </div>
-            </div>
-
-            <!-- Live Preview Section - Polished Design -->
-            <div class="lg:sticky lg:top-24 h-fit">
-                <div class="text-sm font-medium text-gray-500 mb-2 flex items-center justify-between no-print">
-                    <span>📄 Live Preview</span>
-                    <span class="text-xs bg-gray-100 px-2 py-0.5 rounded-full">auto-updates</span>
-                </div>
-                <div id="invoicePreview" class="invoice-preview rounded-2xl p-7 md:p-8 min-h-[850px] relative bg-white border border-gray-200 shadow-xl transition-all">
-                    <!-- dynamic preview injected -->
-                </div>
-            </div>
+        
+        <div class="card">
+            <h3 class="font-bold mb-2">⭐ Upgrade to Pro</h3>
+            <p class="text-sm text-gray-600 mb-2">Unlimited invoices • 10+ Templates • Cloud Backup • Priority Support</p>
+            <button onclick="showUpgradeModal()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2 rounded-lg font-semibold">Upgrade Now - $9/month</button>
         </div>
-
-        <!-- Monetization Section - Enhanced with interactive -->
-        <div id="proSection" class="mt-20 no-print scroll-mt-16">
-            <div class="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 rounded-3xl p-8 text-white text-center shadow-2xl transform transition-all">
-                <div class="inline-block bg-white/20 backdrop-blur-sm px-4 py-1 rounded-full text-sm font-medium mb-4">✨ Premium Upgrade</div>
-                <h3 class="text-3xl font-bold mb-3">Unlock Pro Templates & Automation</h3>
-                <p class="text-indigo-100 max-w-lg mx-auto mb-6">Get 10+ designer invoice templates, bulk PDF export, custom branding removal, and advanced analytics.</p>
-                <button class="bg-white text-indigo-700 px-8 py-3.5 rounded-xl font-bold shadow-lg hover:scale-105 transition-all inline-flex items-center gap-2">
-                    Upgrade for $12 → <span class="text-xs">one-time</span>
-                </button>
-                <p class="text-xs text-indigo-200 mt-4">Secure payment via Stripe | 30-day money-back</p>
-            </div>
-        </div>
-
-        <div class="mt-8 text-center no-print pb-16">
-            <p class="text-gray-500 mb-3 flex items-center justify-center gap-1">❤️ Loved by 5k+ freelancers — keep QuickInvoice free</p>
-            <a href="https://www.buymeacoffee.com/" target="_blank" class="inline-flex items-center gap-2 bg-[#FFDD00] text-gray-900 px-7 py-3 rounded-full font-bold hover:shadow-lg transition-all">
-                ☕ Buy Me a Coffee
-            </a>
+        
+        <div class="card">
+            <h3 class="font-bold mb-2">📱 Install App</h3>
+            <p class="text-sm text-gray-600">Add SupremeInvoice to your home screen for offline access</p>
+            <button onclick="installPWA()" id="installBtn" class="w-full bg-gray-800 text-white py-2 rounded-lg mt-2 hidden">Install App</button>
         </div>
     </div>
 
-    <script>
-        // State management
-        let items = [
-            { description: 'Premium Web Design & Development', quantity: 2, rate: 275 },
-            { description: 'SEO Optimization Package', quantity: 1, rate: 450 }
-        ];
-
-        // DOM elements
-        const itemsContainer = document.getElementById('itemsContainer');
-        const taxRateInput = document.getElementById('taxRate');
-        const discountInput = document.getElementById('discountPercent');
-        
-        // Helper functions
-        function formatMoney(amount) {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
-        }
-
-        function calculateTotal() {
-            const subtotalRaw = items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-            const taxPercent = parseFloat(taxRateInput.value) || 0;
-            let discountPercent = parseFloat(discountInput.value) || 0;
-            if (discountPercent > 100) discountPercent = 100;
-            const discountAmount = subtotalRaw * (discountPercent / 100);
-            const afterDiscount = subtotalRaw - discountAmount;
-            const taxAmount = afterDiscount * (taxPercent / 100);
-            const finalTotal = afterDiscount + taxAmount;
+    <!-- Create Invoice View -->
+    <div id="createView" class="hidden">
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">📝 Invoice Details</h2>
             
-            document.getElementById('subtotal').textContent = formatMoney(subtotalRaw);
-            document.getElementById('taxAmount').textContent = `Tax: ${formatMoney(taxAmount)}`;
-            document.getElementById('total').textContent = formatMoney(finalTotal);
-            updatePreview();
-            return { subtotalRaw, taxAmount, finalTotal, discountAmount, afterDiscount };
-        }
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <input type="text" id="invoiceNumber" placeholder="Invoice #" value="INV-001">
+                <input type="date" id="invoiceDate">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <input type="date" id="dueDate">
+                <input type="text" id="currency" placeholder="Currency" value="USD">
+            </div>
+            
+            <div class="mb-3">
+                <p class="text-sm font-medium mb-1">From (Your Business)</p>
+                <input type="text" id="fromName" placeholder="Business Name" class="mb-2" value="Supreme Business Solutions">
+                <input type="email" id="fromEmail" placeholder="Email" class="mb-2" value="hello@supremebusiness.com">
+                <input type="text" id="fromPhone" placeholder="Phone" class="mb-2" value="+1 (800) 555-0123">
+                <input type="text" id="fromAddress" placeholder="Address" value="123 Business Ave, New York, NY 10001">
+            </div>
+            
+            <div class="mb-3">
+                <p class="text-sm font-medium mb-1">To (Client)</p>
+                <input type="text" id="toName" placeholder="Client Name" class="mb-2" value="TechStart Inc.">
+                <input type="email" id="toEmail" placeholder="Client Email" class="mb-2" value="billing@techstart.com">
+                <input type="text" id="toAddress" placeholder="Client Address" value="456 Tech Boulevard, San Francisco, CA 94105">
+            </div>
+            
+            <div class="mb-3">
+                <p class="text-sm font-medium mb-1">Line Items</p>
+                <div id="itemsContainer" class="space-y-2"></div>
+                <button onclick="addItem()" class="text-blue-600 text-sm mt-1">+ Add Line Item</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <input type="number" id="taxRate" placeholder="Tax Rate %" value="0" step="0.5">
+                <input type="number" id="discountRate" placeholder="Discount %" value="0" step="1">
+            </div>
+            
+            <textarea id="notes" rows="3" placeholder="Notes & Payment Instructions" class="mb-3">Payment is due within 14 days. Please include invoice number with payment. Thank you for your business!</textarea>
+            
+            <div class="border-t pt-3 mb-3">
+                <div class="flex justify-between text-sm mb-1">
+                    <span>Subtotal:</span>
+                    <span id="subtotalDisplay">$0.00</span>
+                </div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span>Tax (<span id="taxRateDisplay">0</span>%):</span>
+                    <span id="taxDisplay">$0.00</span>
+                </div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span>Discount (<span id="discountDisplay">0</span>%):</span>
+                    <span id="discountAmountDisplay">$0.00</span>
+                </div>
+                <div class="flex justify-between text-lg font-bold pt-2 border-t">
+                    <span>Total:</span>
+                    <span id="totalDisplay" class="text-red-600">$0.00</span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="saveInvoice()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold">💾 Save</button>
+                <button onclick="downloadPDF()" class="flex-1 bg-gradient-to-r from-[#002868] to-[#BF0A30] text-white py-2 rounded-lg font-semibold">📄 Download PDF</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="font-bold mb-2">👁️ Live Preview</h3>
+            <div id="previewArea" class="bg-gray-50 p-3 rounded-lg text-sm min-h-[300px]"></div>
+        </div>
+    </div>
 
-        function addItem() {
-            items.push({ description: 'New Service', quantity: 1, rate: 0 });
-            renderItems();
-            calculateTotal();
-        }
+    <!-- Templates View -->
+    <div id="templatesView" class="hidden">
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">🎨 Invoice Templates</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="border rounded-lg p-2 text-center cursor-pointer hover:shadow-lg transition" onclick="selectTemplate('modern')">
+                    <div class="h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg mb-1"></div>
+                    <p class="font-medium text-sm">Modern</p>
+                    <p class="text-xs text-gray-500">Pro</p>
+                </div>
+                <div class="border rounded-lg p-2 text-center cursor-pointer hover:shadow-lg transition" onclick="selectTemplate('elegant')">
+                    <div class="h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg mb-1"></div>
+                    <p class="font-medium text-sm">Elegant</p>
+                    <p class="text-xs text-gray-500">Pro</p>
+                </div>
+                <div class="border rounded-lg p-2 text-center cursor-pointer hover:shadow-lg transition" onclick="selectTemplate('corporate')">
+                    <div class="h-20 bg-gradient-to-r from-slate-700 to-gray-800 rounded-lg mb-1"></div>
+                    <p class="font-medium text-sm">Corporate</p>
+                    <p class="text-xs text-gray-500">Pro</p>
+                </div>
+                <div class="border-2 border-blue-500 rounded-lg p-2 text-center cursor-pointer hover:shadow-lg transition" onclick="selectTemplate('minimal')">
+                    <div class="h-20 bg-gradient-to-r from-gray-300 to-gray-400 rounded-lg mb-1"></div>
+                    <p class="font-medium text-sm">Minimal</p>
+                    <p class="text-xs text-green-600">Free</p>
+                </div>
+            </div>
+            <div class="mt-3 p-3 bg-yellow-50 rounded-lg text-center">
+                <p class="text-sm">⭐ <span id="templateProMsg">Upgrade to Pro</span> to unlock all templates</p>
+            </div>
+        </div>
+    </div>
 
-        function removeItem(idx) {
-            if (items.length === 1) {
-                items = [{ description: 'Service', quantity: 1, rate: 0 }];
-            } else {
-                items.splice(idx, 1);
-            }
-            renderItems();
-            calculateTotal();
-        }
+    <!-- Account View -->
+    <div id="accountView" class="hidden">
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">👤 Account Settings</h2>
+            <div id="accountInfo" class="text-center py-4">
+                <div class="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl">👤</div>
+                <p class="font-medium">Guest User</p>
+                <p class="text-sm text-gray-500">Sign in to save invoices to cloud</p>
+                <button onclick="window.location.href='/login.html'" class="mt-3 bg-[#002868] text-white px-6 py-2 rounded-lg text-sm">Sign In / Sign Up</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="font-bold mb-2">📜 Legal</h3>
+            <button onclick="showTerms()" class="w-full text-left py-2 text-gray-700 border-b">Terms & Conditions</button>
+            <button onclick="showPrivacy()" class="w-full text-left py-2 text-gray-700 border-b">Privacy Policy</button>
+            <button onclick="contactSupport()" class="w-full text-left py-2 text-gray-700">Contact Support</button>
+        </div>
+        
+        <div class="card">
+            <h3 class="font-bold mb-2">ℹ️ About</h3>
+            <p class="text-sm text-gray-600">Version 2.0.0</p>
+            <p class="text-sm text-gray-600">© 2024 SupremeInvoice. All rights reserved.</p>
+        </div>
+    </div>
+</div>
 
-        function updateItemField(index, field, value) {
-            if (field === 'description') items[index][field] = value;
-            else items[index][field] = parseFloat(value) || 0;
-            if (items[index].quantity < 0) items[index].quantity = 0;
-            if (items[index].rate < 0) items[index].rate = 0;
-            calculateTotal();
-        }
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <div class="nav-btn active" onclick="switchView('dashboard')">
+        <div>🏠</div>
+        <div class="text-xs">Home</div>
+    </div>
+    <div class="nav-btn" onclick="switchView('create')">
+        <div>📝</div>
+        <div class="text-xs">Create</div>
+    </div>
+    <div class="nav-btn" onclick="switchView('templates')">
+        <div>🎨</div>
+        <div class="text-xs">Templates</div>
+    </div>
+    <div class="nav-btn" onclick="switchView('account')">
+        <div>👤</div>
+        <div class="text-xs">Account</div>
+    </div>
+</div>
 
-        function renderItems() {
-            itemsContainer.innerHTML = items.map((item, idx) => `
-                <div class="item-row flex gap-2 items-start bg-gray-50 p-3 rounded-xl transition-all border border-transparent hover:border-indigo-200 relative group">
-                    <div class="flex-1 space-y-2">
-                        <input type="text" value="${escapeHtml(item.description)}" placeholder="Item description" 
-                            onchange="updateItemField(${idx}, 'description', this.value)"
-                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <div class="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
-                                <span class="text-xs text-gray-500">Qty</span>
-                                <input type="number" value="${item.quantity}" step="1" min="0"
-                                    onchange="updateItemField(${idx}, 'quantity', this.value)"
-                                    class="w-16 px-1 py-1 text-center text-sm outline-none bg-transparent">
-                            </div>
-                            <div class="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
-                                <span class="text-xs text-gray-500">Rate</span>
-                                <input type="number" value="${item.rate}" step="5" min="0"
-                                    onchange="updateItemField(${idx}, 'rate', this.value)"
-                                    class="w-20 px-1 py-1 text-center text-sm outline-none bg-transparent">
-                            </div>
-                            <span class="text-xs font-mono bg-white px-2 py-1 rounded border">${formatMoney(item.quantity * item.rate)}</span>
-                        </div>
+<!-- Upgrade Modal -->
+<div id="upgradeModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 class="text-xl font-bold mb-4">⭐ Upgrade to Pro</h3>
+        <div class="space-y-3 mb-6">
+            <div class="border rounded-lg p-3 cursor-pointer hover:border-yellow-400" onclick="selectPlan('monthly')">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">Monthly Plan</p>
+                        <p class="text-xs text-gray-500">Billed monthly, cancel anytime</p>
                     </div>
-                    <button onclick="removeItem(${idx})" class="remove-item-btn text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
+                    <p class="text-xl font-bold">$9<span class="text-sm">/mo</span></p>
+                </div>
+            </div>
+            <div class="border rounded-lg p-3 cursor-pointer hover:border-yellow-400" onclick="selectPlan('lifetime')">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">Lifetime Plan</p>
+                        <p class="text-xs text-gray-500">One-time payment, lifetime access</p>
+                    </div>
+                    <p class="text-xl font-bold">$97</p>
+                </div>
+            </div>
+        </div>
+        <button onclick="processPayment()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-bold">Proceed to Payment</button>
+        <button onclick="closeUpgradeModal()" class="w-full mt-2 text-gray-500 text-sm py-2">Cancel</button>
+        <p class="text-xs text-gray-400 text-center mt-3">🔒 Secure payment via Flutterwave</p>
+    </div>
+</div>
+
+<!-- Terms Modal (First Visit) -->
+<div id="termsModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 class="text-xl font-bold mb-3">Terms & Conditions</h2>
+        <div class="text-sm text-gray-600 space-y-2 max-h-96 overflow-y-auto mb-4">
+            <p><strong>1. Acceptance of Terms</strong><br>By using SupremeInvoice, you agree to these terms.</p>
+            <p><strong>2. Free Plan</strong><br>Free users receive 3 invoices per month. No credit card required.</p>
+            <p><strong>3. Pro Plan</strong><br>$9/month or $97 lifetime. Includes unlimited invoices, premium templates, cloud storage, and priority support.</p>
+            <p><strong>4. Refund Policy</strong><br>30-day money-back guarantee for all paid plans.</p>
+            <p><strong>5. Data Privacy</strong><br>Your data is encrypted. We never sell or share your personal information.</p>
+            <p><strong>6. Subscription Auto-Renewal</strong><br>Monthly subscriptions auto-renew. You can cancel anytime from your account.</p>
+            <p><strong>7. Acceptable Use</strong><br>You agree not to use this service for illegal activities or fraud.</p>
+            <p><strong>8. Limitation of Liability</strong><br>SupremeInvoice is not liable for indirect or consequential damages.</p>
+            <p><strong>9. Modifications</strong><br>We reserve the right to modify these terms at any time.</p>
+            <p><strong>10. Governing Law</strong><br>These terms are governed by the laws of the United States.</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="acceptTerms()" class="flex-1 bg-[#002868] text-white py-2 rounded-lg font-semibold">I Accept</button>
+            <button onclick="declineTerms()" class="flex-1 border border-gray-300 py-2 rounded-lg font-semibold">Decline</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============ STATE ============
+    let currentUser = null;
+    let isPro = false;
+    let currentTemplate = 'minimal';
+    let items = [{ description: "Web Development Services", quantity: 1, rate: 599 }];
+    let invoices = JSON.parse(localStorage.getItem('supreme_invoices') || '[]');
+    let selectedPlan = 'monthly';
+    
+    // ============ INIT ============
+    function init() {
+        // Load user from localStorage
+        let savedUser = localStorage.getItem('supreme_user');
+        if(savedUser) {
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('userName').innerHTML = currentUser.email.split('@')[0];
+            document.getElementById('authBtn').innerHTML = 'Logout';
+            document.getElementById('authBtn').onclick = () => logout();
+        }
+        
+        isPro = localStorage.getItem('supreme_pro') === 'true';
+        updatePlanBadge();
+        
+        // Check terms acceptance
+        if(!localStorage.getItem('termsAccepted')) {
+            document.getElementById('termsModal').classList.remove('hidden');
+        }
+        
+        // Set dates
+        document.getElementById('invoiceDate').valueAsDate = new Date();
+        let due = new Date();
+        due.setDate(due.getDate() + 14);
+        document.getElementById('dueDate').valueAsDate = due;
+        
+        renderItems();
+        calculateTotal();
+        updateDashboard();
+        updatePreview();
+        
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').classList.remove('hidden');
+        });
+        window.installPWA = function() {
+            if(deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => deferredPrompt = null);
+            }
+        };
+    }
+    
+    function updatePlanBadge() {
+        let badge = document.getElementById('planBadge');
+        if(isPro) {
+            badge.innerHTML = 'Pro ⭐';
+            badge.className = 'text-xs bg-yellow-500 text-white px-2 py-1 rounded-full';
+        } else {
+            badge.innerHTML = 'Free';
+            badge.className = 'text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full';
+        }
+        document.getElementById('templateProMsg').innerHTML = isPro ? 'You have access to all templates!' : 'Upgrade to Pro';
+    }
+    
+    function updateDashboard() {
+        let freeInvoices = invoices.filter(i => !i.pro).length;
+        let remaining = Math.max(0, 3 - freeInvoices);
+        document.getElementById('invoiceCount').innerHTML = isPro ? '∞' : remaining;
+        
+        let totalRevenue = invoices.reduce((sum, i) => sum + i.total, 0);
+        document.getElementById('revenueCount').innerHTML = `$${totalRevenue.toFixed(2)}`;
+        
+        if(invoices.length > 0) {
+            document.getElementById('recentInvoices').innerHTML = invoices.slice(0, 5).map(inv => `
+                <div class="flex justify-between items-center p-2 border-b">
+                    <div>
+                        <p class="font-medium text-sm">${inv.number}</p>
+                        <p class="text-xs text-gray-500">${inv.client}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-sm">$${inv.total.toFixed(2)}</p>
+                        <p class="text-xs text-gray-500">${new Date(inv.date).toLocaleDateString()}</p>
+                    </div>
                 </div>
             `).join('');
         }
-        
-        function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-        
-        function updatePreview() {
-            const fromName = document.getElementById('fromName').value || 'Business';
-            const fromEmail = document.getElementById('fromEmail').value;
-            const fromPhone = document.getElementById('fromPhone').value;
-            const fromAddress = document.getElementById('fromAddress').value;
-            const toName = document.getElementById('toName').value || 'Client';
-            const toEmail = document.getElementById('toEmail').value;
-            const toAddress = document.getElementById('toAddress').value;
-            const invNumber = document.getElementById('invoiceNumber').value;
-            const invDate = document.getElementById('invoiceDate').value;
-            const dueDate = document.getElementById('dueDate').value;
-            const notes = document.getElementById('notes').value;
-            const taxRate = parseFloat(taxRateInput.value) || 0;
-            const discountPercent = parseFloat(discountInput.value) || 0;
-            
-            const subtotalRaw = items.reduce((s, i) => s + (i.quantity * i.rate), 0);
-            const discountAmount = subtotalRaw * (discountPercent / 100);
-            const afterDiscount = subtotalRaw - discountAmount;
-            const taxAmount = afterDiscount * (taxRate / 100);
-            const finalTotal = afterDiscount + taxAmount;
-            
-            const previewDiv = document.getElementById('invoicePreview');
-            previewDiv.innerHTML = `
-                <div class="flex flex-col md:flex-row justify-between items-start mb-8 pb-4 border-b border-gray-100">
-                    <div>
-                        <h1 class="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent">INVOICE</h1>
-                        <p class="text-gray-500 text-sm mt-1">#${invNumber}</p>
-                    </div>
-                    <div class="mt-3 md:mt-0 text-right">
-                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl flex items-center justify-center text-white font-bold text-xl mb-2 ml-auto shadow-sm">Q</div>
-                        <p class="font-bold text-gray-800">${fromName}</p>
-                        <p class="text-gray-500 text-xs">${fromEmail}</p>
-                        ${fromPhone ? `<p class="text-gray-500 text-xs">${fromPhone}</p>` : ''}
-                        <p class="text-gray-500 text-xs">${fromAddress}</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-gray-50 p-4 rounded-xl">
-                    <div>
-                        <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Bill To</p>
-                        <p class="font-semibold text-gray-800 mt-1">${toName}</p>
-                        <p class="text-gray-600 text-sm">${toEmail}</p>
-                        <p class="text-gray-600 text-sm">${toAddress}</p>
-                    </div>
-                    <div class="md:text-right">
-                        <div class="flex md:justify-end gap-6">
-                            <div><span class="text-gray-500 text-xs">Issue Date:</span><br><span class="font-medium">${invDate || '—'}</span></div>
-                            <div><span class="text-gray-500 text-xs">Due Date:</span><br><span class="font-medium text-rose-600">${dueDate || '—'}</span></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="overflow-x-auto mb-6">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="border-b-2 border-gray-200">
-                                <th class="text-left py-3 text-gray-500 font-semibold">Description</th>
-                                <th class="text-right py-3 text-gray-500 font-semibold">Qty</th>
-                                <th class="text-right py-3 text-gray-500 font-semibold">Rate</th>
-                                <th class="text-right py-3 text-gray-500 font-semibold">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(item => `
-                                <tr class="border-b border-gray-100">
-                                    <td class="py-3 text-gray-800">${escapeHtml(item.description) || '—'}</td>
-                                    <td class="py-3 text-right text-gray-700">${item.quantity}</td>
-                                    <td class="py-3 text-right text-gray-700">${formatMoney(item.rate)}</td>
-                                    <td class="py-3 text-right font-medium text-gray-800">${formatMoney(item.quantity * item.rate)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="flex justify-end mb-8">
-                    <div class="w-72 space-y-2 bg-gray-50 p-4 rounded-xl">
-                        <div class="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>${formatMoney(subtotalRaw)}</span></div>
-                        ${discountPercent > 0 ? `<div class="flex justify-between text-gray-600 text-sm"><span>Discount (${discountPercent}%)</span><span>${formatMoney(discountAmount)}</span></div>` : ''}
-                        <div class="flex justify-between text-gray-600 text-sm"><span>Tax (${taxRate}%)</span><span>${formatMoney(taxAmount)}</span></div>
-                        <div class="flex justify-between text-lg font-bold pt-2 border-t border-gray-300"><span>Total</span><span class="text-indigo-700">${formatMoney(finalTotal)}</span></div>
-                    </div>
-                </div>
-                
-                <div class="bg-indigo-50/40 rounded-xl p-4 text-sm text-gray-700 border border-indigo-100">
-                    <p class="font-semibold text-indigo-800 mb-1 flex items-center gap-1">📝 Notes & Payment Terms</p>
-                    <p class="whitespace-pre-line">${escapeHtml(notes) || 'No additional notes.'}</p>
-                </div>
-                <div class="mt-8 text-center text-gray-400 text-[11px] border-t pt-4">Generated by QuickInvoice Pro — secure & smart billing</div>
-            `;
-        }
-        
-        // PDF generation with high quality using html2canvas + jsPDF for perfect render
-        async function generatePDF() {
-            const { jsPDF } = window.jspdf;
-            const element = document.getElementById('invoicePreview');
-            const originalOverflow = element.style.overflow;
-            element.style.overflow = 'visible';
-            
-            try {
-                const canvas = await html2canvas(element, {
-                    scale: 2,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    useCORS: false
-                });
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF({
-                    unit: 'mm',
-                    format: 'a4',
-                    orientation: 'portrait'
-                });
-                const imgWidth = 210;
-                const pageHeight = 297;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let position = 0;
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                if (imgHeight > pageHeight) {
-                    let remainingHeight = imgHeight - pageHeight;
-                    let currentPos = -pageHeight;
-                    while (remainingHeight > 0) {
-                        pdf.addPage();
-                        currentPos -= pageHeight;
-                        pdf.addImage(imgData, 'PNG', 0, currentPos, imgWidth, imgHeight);
-                        remainingHeight -= pageHeight;
-                    }
-                }
-                pdf.save(`Invoice_${document.getElementById('invoiceNumber').value || 'document'}.pdf`);
-            } catch (error) {
-                console.error('PDF error:', error);
-                alert('PDF generation failed, but you can use Print > Save as PDF');
-            } finally {
-                element.style.overflow = originalOverflow;
-            }
-        }
-        
-        // Set dates defaults
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('invoiceDate').value = today;
-        const due = new Date();
-        due.setDate(due.getDate() + 14);
-        document.getElementById('dueDate').value = due.toISOString().split('T')[0];
-        
-        // Add event listeners for all inputs
-        const inputs = ['fromName', 'fromEmail', 'fromPhone', 'fromAddress', 'toName', 'toEmail', 'toAddress', 'invoiceNumber', 'invoiceDate', 'dueDate', 'notes'];
-        inputs.forEach(id => {
-            document.getElementById(id)?.addEventListener('input', () => updatePreview());
-        });
-        taxRateInput.addEventListener('input', () => calculateTotal());
-        discountInput.addEventListener('input', () => calculateTotal());
-        
-        // Reset demo data
-        document.getElementById('resetBtn')?.addEventListener('click', () => {
-            items = [{ description: 'Web Design & Development', quantity: 1, rate: 599 }, { description: 'SEO Consultation', quantity: 1, rate: 299 }];
-            renderItems();
-            document.getElementById('fromName').value = 'Alex Design Studio';
-            document.getElementById('fromEmail').value = 'alex@designstudio.com';
-            document.getElementById('fromPhone').value = '+1 (555) 123-4567';
-            document.getElementById('fromAddress').value = '123 Creative St, New York, NY 10001';
-            document.getElementById('toName').value = 'TechStart Inc.';
-            document.getElementById('toEmail').value = 'billing@techstart.com';
-            document.getElementById('toAddress').value = '456 Business Ave, San Francisco, CA 94105';
-            document.getElementById('invoiceNumber').value = 'INV-2025-001';
-            document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
-            let newDue = new Date(); newDue.setDate(newDue.getDate() + 14);
-            document.getElementById('dueDate').value = newDue.toISOString().split('T')[0];
-            document.getElementById('notes').value = 'Payment due within 14 days. Thank you for your business!';
-            taxRateInput.value = '0';
-            discountInput.value = '0';
-            calculateTotal();
-        });
-        
-        document.getElementById('proCtaBtn')?.addEventListener('click', () => {
-            document.getElementById('proSection').scrollIntoView({ behavior: 'smooth' });
-        });
-        
-        // Initial render everything
+    }
+    
+    // ============ ITEMS MANAGEMENT ============
+    function addItem() {
+        items.push({ description: "New Service", quantity: 1, rate: 0 });
         renderItems();
         calculateTotal();
-    </script>
+    }
+    
+    function removeItem(index) {
+        items.splice(index, 1);
+        if(items.length === 0) items = [{ description: "Service", quantity: 1, rate: 0 }];
+        renderItems();
+        calculateTotal();
+    }
+    
+    function updateItem(index, field, value) {
+        if(field === 'description') items[index].description = value;
+        if(field === 'quantity') items[index].quantity = parseFloat(value) || 0;
+        if(field === 'rate') items[index].rate = parseFloat(value) || 0;
+        calculateTotal();
+    }
+    
+    function renderItems() {
+        let container = document.getElementById('itemsContainer');
+        container.innerHTML = items.map((item, i) => `
+            <div class="flex gap-2 items-center">
+                <input type="text" value="${item.description.replace(/"/g, '&quot;')}" onchange="updateItem(${i}, 'description', this.value)" class="flex-1" placeholder="Description">
+                <input type="number" value="${item.quantity}" onchange="updateItem(${i}, 'quantity', this.value)" class="w-20 text-center" placeholder="Qty">
+                <input type="number" value="${item.rate}" onchange="updateItem(${i}, 'rate', this.value)" class="w-28" placeholder="Rate">
+                <span class="text-sm font-medium w-20">$${(item.quantity * item.rate).toFixed(2)}</span>
+                <button onclick="removeItem(${i})" class="text-red-500 text-lg">✕</button>
+            </div>
+        `).join('');
+    }
+    
+    function calculateTotal() {
+        let subtotal = items.reduce((sum, i) => sum + (i.quantity * i.rate), 0);
+        let taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        let discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+        
+        let discountAmount = subtotal * (discountRate / 100);
+        let afterDiscount = subtotal - discountAmount;
+        let taxAmount = afterDiscount * (taxRate / 100);
+        let total = afterDiscount + taxAmount;
+        
+        document.getElementById('subtotalDisplay').innerHTML = `$${subtotal.toFixed(2)}`;
+        document.getElementById('taxDisplay').innerHTML = `$${taxAmount.toFixed(2)}`;
+        document.getElementById('discountAmountDisplay').innerHTML = `$${discountAmount.toFixed(2)}`;
+        document.getElementById('totalDisplay').innerHTML = `$${total.toFixed(2)}`;
+        document.getElementById('taxRateDisplay').innerHTML = taxRate;
+        document.getElementById('discountDisplay').innerHTML = discountRate;
+        
+        updatePreview();
+        return total;
+    }
+    
+    function updatePreview() {
+        let fromName = document.getElementById('fromName').value;
+        let toName = document.getElementById('toName').value;
+        let invoiceNumber = document.getElementById('invoiceNumber').value;
+        let invoiceDate = document.getElementById('invoiceDate').value;
+        let dueDate = document.getElementById('dueDate').value;
+        let notes = document.getElementById('notes').value;
+        let subtotal = items.reduce((sum, i) => sum + (i.quantity * i.rate), 0);
+        let taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        let discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+        let discountAmount = subtotal * (discountRate / 100);
+        let afterDiscount = subtotal - discountAmount;
+        let taxAmount = afterDiscount * (taxRate / 100);
+        let total = afterDiscount + taxAmount;
+        
+        let templateStyles = {
+            minimal: 'font-sans',
+            modern: 'font-sans bg-gradient-to-r from-blue-50 to-white',
+            elegant: 'font-serif',
+            corporate: 'font-sans border-l-4 border-blue-800'
+        };
+        
+        document.getElementById('previewArea').innerHTML = `
+            <div class="${templateStyles[currentTemplate]} p-4">
+                <div class="text-center border-b pb-3 mb-3">
+                    <div class="w-12 h-12 bg-gradient-to-r from-[#002868] to-[#BF0A30] rounded-xl flex items-center justify-center text-white font-bold text-lg mx-auto mb-2">SI</div>
+                    <h2 class="text-xl font-bold">INVOICE</h2>
+                    <p class="text-xs text-gray-500">${invoiceNumber}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+                    <div>
+                        <p class="font-bold">From:</p>
+                        <p>${fromName}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold">To:</p>
+                        <p>${toName}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3 text-xs">
+                    <div>Issue Date: ${invoiceDate}</div>
+                    <div class="text-right">Due Date: ${dueDate}</div>
+                </div>
+                <table class="w-full text-xs mb-3">
+                    <thead><tr class="border-b"><th class="text-left py-1">Description</th><th class="text-right">Qty</th><th class="text-right">Rate</th><th class="text-right">Amount</th></tr></thead>
+                    <tbody>${items.map(i => `<tr><td class="py-1">${i.description}</td><td class="text-right">${i.quantity}</td><td class="text-right">$${i.rate.toFixed(2)}</td><td class="text-right">$${(i.quantity * i.rate).toFixed(2)}</td></tr>`).join('')}</tbody>
+                </table>
+                <div class="text-right text-sm">
+                    <div>Subtotal: $${subtotal.toFixed(2)}</div>
+                    ${discountRate > 0 ? `<div>Discount (${discountRate}%): -$${discountAmount.toFixed(2)}</div>` : ''}
+                    <div>Tax (${taxRate}%): $${taxAmount.toFixed(2)}</div>
+                    <div class="font-bold text-lg mt-1">Total: $${total.toFixed(2)}</div>
+                </div>
+                <div class="text-xs text-gray-500 mt-3 pt-2 border-t">${notes}</div>
+                <div class="text-center text-xs text-gray-400 mt-3">Generated by SupremeInvoice</div>
+            </div>
+        `;
+    }
+    
+    function selectTemplate(template) {
+        if(template !== 'minimal' && !isPro) {
+            alert('Premium templates require Pro upgrade!');
+            showUpgradeModal();
+            return;
+        }
+        currentTemplate = template;
+        updatePreview();
+    }
+    
+    async function downloadPDF() {
+        let total = calculateTotal();
+        let freeInvoices = invoices.filter(i => !i.pro).length;
+        
+        if(!isPro && freeInvoices >= 3) {
+            alert('Free limit reached (3 invoices per month). Upgrade to Pro for unlimited invoices!');
+            showUpgradeModal();
+            return;
+        }
+        
+        let element = document.getElementById('previewArea');
+        let canvas = await html2canvas(element, { scale: 2 });
+        let imgData = canvas.toDataURL('image/png');
+        let { jsPDF } = window.jspdf;
+        let pdf = new jsPDF('p', 'mm', 'a4');
+        let imgWidth = 190;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+        pdf.save(`Invoice_${document.getElementById('invoiceNumber').value}.pdf`);
+        
+        alert('PDF downloaded successfully!');
+    }
+    
+    function saveInvoice() {
+        let total = calculateTotal();
+        let freeInvoices = invoices.filter(i => !i.pro).length;
+        
+        if(!isPro && freeInvoices >= 3) {
+            alert('Free limit reached. Upgrade to Pro to save more invoices!');
+            showUpgradeModal();
+            return;
+        }
+        
+        let invoice = {
+            id: Date.now(),
+            number: document.getElementById('invoiceNumber').value,
+            client: document.getElementById('toName').value,
+            total: total,
+            date: new Date().toISOString(),
+            pro: isPro,
+            items: JSON.parse(JSON.stringify(items))
+        };
+        
+        invoices.unshift(invoice);
+        localStorage.setItem('supreme_invoices', JSON.stringify(invoices));
+        updateDashboard();
+        alert('Invoice saved! View it on your dashboard.');
+    }
+    
+    // ============ AUTH ============
+    function logout() {
+        currentUser = null;
+        localStorage.removeItem('supreme_user');
+        document.getElementById('userName').innerHTML = 'Guest';
+        document.getElementById('authBtn').innerHTML = 'Login';
+        document.getElementById('authBtn').onclick = () => window.location.href = '/login.html';
+        document.getElementById('accountInfo').innerHTML = `
+            <div class="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl">👤</div>
+            <p class="font-medium">Guest User</p>
+            <p class="text-sm text-gray-500">Sign in to save invoices to cloud</p>
+            <button onclick="window.location.href='/login.html'" class="mt-3 bg-[#002868] text-white px-6 py-2 rounded-lg text-sm">Sign In / Sign Up</button>
+        `;
+        alert('Signed out successfully');
+    }
+    
+    // ============ UPGRADE ============
+    function showUpgradeModal() { document.getElementById('upgradeModal').classList.remove('hidden'); }
+    function closeUpgradeModal() { document.getElementById('upgradeModal').classList.add('hidden'); }
+    function selectPlan(plan) { selectedPlan = plan; }
+    
+    function processPayment() {
+        let amount = selectedPlan === 'monthly' ? 9 : 97;
+        alert(`⚠️ REAL PAYMENT REQUIRED\n\nAmount: $${amount}\n\n1. This will connect to Flutterwave payment gateway\n2. Your API keys go in .env file\n3. For testing now, Pro will be unlocked`);
+        
+        // Demo mode unlock
+        isPro = true;
+        localStorage.setItem('supreme_pro', 'true');
+        updatePlanBadge();
+        closeUpgradeModal();
+        alert('✅ Pro unlocked! Enjoy unlimited invoices and premium templates.');
+    }
+    
+    // ============ LEGAL ============
+    function acceptTerms() {
+        localStorage.setItem('termsAccepted', 'true');
+        document.getElementById('termsModal').classList.add('hidden');
+    }
+    function declineTerms() { alert('You must accept Terms & Conditions to use SupremeInvoice'); }
+    function showTerms() { alert('View full terms at /terms.html'); }
+    function showPrivacy() { alert('View privacy policy at /privacy.html'); }
+    function contactSupport() { alert('Email: support@supremeinvoice.com'); }
+    
+    // ============ NAVIGATION ============
+    function switchView(view) {
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('createView').classList.add('hidden');
+        document.getElementById('templatesView').classList.add('hidden');
+        document.getElementById('accountView').classList.add('hidden');
+        document.getElementById(`${view}View`).classList.remove('hidden');
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.closest('.nav-btn').classList.add('active');
+        
+        if(view === 'account' && currentUser) {
+            document.getElementById('accountInfo').innerHTML = `
+                <div class="w-20 h-20 bg-gradient-to-r from-[#002868] to-[#BF0A30] rounded-full mx-auto mb-3 flex items-center justify-center text-white text-2xl font-bold">${currentUser.email[0].toUpperCase()}</div>
+                <p class="font-medium">${currentUser.email}</p>
+                <p class="text-sm text-gray-500">Member since ${new Date(currentUser.createdAt).toLocaleDateString()}</p>
+                <button onclick="logout()" class="mt-3 bg-red-600 text-white px-6 py-2 rounded-lg text-sm">Sign Out</button>
+            `;
+        }
+    }
+    
+    // Start app
+    init();
+</script>
 </body>
 </html>
