@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "builds": [
+        { "src": "*.html", "use": "@vercel/static" },
+        { "src": "api/*.js", "use": "@vercel/node" }
+    ],
+    "routes": [
+        { "src": "/api/(.*)", "dest": "/api/$1" },
+        { "src": "/(.*)", "dest": "/$1" }
+    ],
+    "env": {
+        "SUPABASE_URL": "@supabase_url",
+        "SUPABASE_ANON_KEY": "@supabase_anon_key",
+        "FLUTTERWAVE_PUBLIC_KEY": "@flutterwave_public",
+        "FLUTTERWAVE_SECRET_KEY": "@flutterwave_secret",
+        "PAYSTACK_PUBLIC_KEY": "@paystack_public",
+        "PAYSTACK_SECRET_KEY": "@paystack_secret"
+    }
+}
